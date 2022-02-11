@@ -1,4 +1,4 @@
-import React, { Component } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Searchbar from "./Searchbar/Searchbar";
 import { ToastContainer, toast } from 'react-toastify';
@@ -10,84 +10,70 @@ import Modal from "./Modal/Modal";
 
 axios.defaults.baseURL = 'https://pixabay.com/api';
 
-class App extends Component {
+export default function App() {
 
-  state = {
-    searchItem: '',
-    items: [],
-    status: 'idle',
-    page: 1,
-    showModal: false,
-    imageModal: null,
-  };
+  const [searchItem, setSearchItem] = useState('');
+  const [items, setItems] = useState([]);
+  const [status, setStatus] = useState('idle');
+  const [page, setPage] = useState(1);
+  const [showModal, setShowModal] = useState(false);
+  const [imageModal, setImageModal] = useState(null);
 
-  async componentDidUpdate(prevProps, prevState) {
-    const prevSearch = prevState.searchItem;
-    const newSearch = this.state.searchItem;
-    const prevPage = prevState.page;
-    const newPage = this.state.page;
 
-    if (prevSearch !== newSearch || prevPage !== newPage) {
-      this.setState({ status: 'pending' });
-      if (prevSearch !== newSearch)  {
-            this.setState({page: 1})
-          }
-  
+  useEffect(() => {
+    if (searchItem === '') {
+      return;
+    }
+    
+    async function fetchPictures() {
+      setStatus('pending');
+
       try {
-        const response = await axios.get(`/?q=${newSearch}&page=${newPage}&key=24558564-a16a5722e1280d44cb84f27e6&image_type=photo&orientation=horizontal&per_page=12`);
-        //console.log(response.data);
-        const currentItems = response.data.hits.map(({ id, webformatURL, largeImageURL, tags }) => {
-          return { id, webformatURL, largeImageURL, tags };
-        });
-        this.setState((prevState) => ({
-          items: [...prevState.items, ...currentItems], status: 'resolved',
-        }));
-        if (response.data.hits.length === 0) {
-          toast.error('Неправильный запрос, давай по новой!', { position: "top-center", });
-        }
-      } catch (error) {
-        toast.error('Все пропало!', { position: "top-center", });
-        this.setState({ status: 'rejected' });
+      const response = await axios.get(`/?q=${searchItem}&page=${page}&key=24558564-a16a5722e1280d44cb84f27e6&image_type=photo&orientation=horizontal&per_page=12`);
+      const currentItems = response.data.hits.map(({ id, webformatURL, largeImageURL, tags }) => {
+        return { id, webformatURL, largeImageURL, tags };
+      });
+      setItems(items => [...items, ...currentItems])
+      setStatus('resolved');
+
+      if (response.data.hits.length === 0) {
+        toast.error('Неправильный запрос, давай по новой!', { position: "top-center", });
       }
+    } catch (error) {
+      toast.error('Все пропало!', { position: "top-center", });
+      setStatus('rejected');
+    }
     };
-  }; 
 
-  handleFormSubmit = searchItem => {
-    this.setState({ searchItem, items: [] });
-  }
+    fetchPictures();
 
-  ClickLoadBtn = () => {
-    this.setState((prevState) => ({
-      page: prevState.page + 1,
-    }));
+  }, [searchItem, page])
+
+  
+  const handleFormSubmit = searchQuery => {
+    setSearchItem(searchQuery);
+    setItems([]);
+    setPage(1);
   };
 
-  toggleModal = largeImageURL => {
-    this.setState(({ showModal }) => ({
-      showModal: !showModal,
-    }));
-    this.setState({ imageModal: largeImageURL });
+  const toggleModal = largeImageURL => {
+    setShowModal({ showModal: !showModal });
+    setImageModal({ imageModal: largeImageURL });
   };
 
-
-  render() {
-    const { items, status, showModal, imageModal} = this.state;
-
-    return (
+  
+  return (
     <>
-        <Searchbar onSubmit={this.handleFormSubmit} />
-        {items.length > 0 && <ImageGallery pictures={items} onClick={this.toggleModal} />}
-        {status === 'pending' && <LoaderImg />}
-        {(items.length === 12 || items.length > 12) && <LoadMoreBtn onClick={this.ClickLoadBtn} />}
-        {showModal && (
-          <Modal onClose={this.toggleModal}>
-            <img src={imageModal} alt="" />
-          </Modal>
-        )}
-        <ToastContainer autoClose={2000} />
+      <Searchbar onSubmit={handleFormSubmit} />
+      {items.length > 0 && <ImageGallery pictures={items} onClick={toggleModal} />}
+      {status === 'pending' && <LoaderImg />}
+      {(items.length === 12 || items.length > 12) && <LoadMoreBtn onClick={() => setPage(page => page + 1)} />}
+      {showModal &&
+        <Modal onClose={toggleModal}>
+          <img src={imageModal} alt="" />
+        </Modal>
+      }
+      <ToastContainer autoClose={2000} />
     </>
   );
-  }
 };
-
-export default App;
