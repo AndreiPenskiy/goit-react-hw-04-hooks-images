@@ -5,7 +5,7 @@ import PropTypes from 'prop-types';
 
 const modalRoot = document.querySelector('#modal-root');
 
-export default function Modal ({children}) {
+export default function Modal ({onClose, children}) {
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -14,18 +14,18 @@ export default function Modal ({children}) {
       window.removeEventListener('keydown', handleKeyDown);
     }
     
-  }, []);
+  });
 
 
     const handleKeyDown = e => {
     if (e.code === 'Escape') {
-      this.props.onClose();
+      onClose();
     }
     };
 
     const handleBackdropClick = event => {
     if (event.currentTarget === event.target) {
-      this.props.onClose();
+      onClose();
     }
   };
     
@@ -41,4 +41,5 @@ export default function Modal ({children}) {
 
 Modal.propTypes = {
   children: PropTypes.node.isRequired,
+  onClose: PropTypes.func.isRequired,
 };
